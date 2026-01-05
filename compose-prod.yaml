@@ -60,3 +60,4 @@ volumes:
             type: none
             o: bind
             device: /srv/volume/knihozrout/storage
+    app-code:
