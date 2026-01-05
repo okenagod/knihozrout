@@ -81,6 +81,21 @@ Po navštívení těchto adres v prohlížeči tyto routy z bezpečnostních dů
 ### 6. Struktura složek
 Pro maximální bezpečnost doporučujeme nahrát obsah složky `public` do `public_html` (nebo ekvivalentu vašeho hostingu) a zbytek projektu o úroveň výš. Nezapomeňte pak upravit cesty v `index.php`.
 
+### 7. Optimalizace výkonu
+Na produkci je důležité mít nacachovanou konfiguraci a routy:
+- `php artisan config:cache`
+- `php artisan route:cache`
+- `php artisan view:cache`
+- `php artisan filament:cache-components` (pro Filament v3)
+
+### 8. Bezpečnostní upozornění
+- Nikdy nenechávejte `APP_DEBUG=true` na produkčním serveru.
+- Ujistěte se, že soubor `.env` není přístupný z prohlížeče.
+- Pravidelně zálohujte databázi i složku `storage/app/public`.
+
 ## Vývoj
 - Spuštění vývojového prostředí: `./vendor/bin/sail up`
 - Spuštění testů: `./vendor/bin/sail test`
+- Vytvoření administrátorského účtu: `./vendor/bin/sail artisan make:filament-user`
+
+V produkčním prostředí bez Sailu použijte standardní: `php artisan make:filament-user` (pokud máte přístup k terminálu).

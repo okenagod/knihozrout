@@ -24,3 +24,4 @@ Homestead.yaml
 Thumbs.db
 /google-auth.json
 *.json_Zone.Identifier
+/.env.vedos

@@ -1,0 +1,50 @@
+services:
+    # PHP Aplikace
+    laravel.app:
+        build:
+            context: .
+            dockerfile: Dockerfile.prod
+        image: my-laravel-app/php
+        restart: always
+        env_file: .env
+        networks:
+            - backend
+
+    # Webový server (Nginx)
+    nginx:
+        image: nginx:alpine
+        restart: always
+        ports:
+            - "8080:80" # Port 8080 bude ten, který zadáš do NPM
+        volumes:
+            - .:/var/www/html
+            - ./serverconfig/nginx.conf:/etc/nginx/conf.d/default.conf
+        depends_on:
+            - laravel.app
+        networks:
+            - backend
+            - proxy_network
+
+    # Databáze
+    mysql:
+        image: 'mysql:8.4'
+        restart: always
+        environment:
+            MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_DATABASE: '${DB_DATABASE}'
+            MYSQL_USER: '${DB_USERNAME}'
+            MYSQL_PASSWORD: '${DB_PASSWORD}'
+        volumes:
+            - 'production-db-data:/var/lib/mysql'
+        networks:
+            - backend
+
+networks:
+    backend:
+        driver: bridge
+    proxy_network:
+        external: true # Tato síť už existuje (vytvořili jsme ji pro NPM)
+
+volumes:
+    production-db-data:
+        driver: local

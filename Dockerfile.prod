@@ -1,0 +1,44 @@
+# 1. Fáze: Instalace závislostí (Composer)
+FROM composer:2.7 as vendor
+COPY database/ database/
+COPY composer.json composer.json
+COPY composer.lock composer.lock
+RUN composer install \
+    --ignore-platform-reqs \
+    --no-interaction \
+    --no-plugins \
+    --no-scripts \
+    --prefer-dist
+
+# 2. Fáze: Hlavní obraz aplikace
+FROM php:8.3-fpm-alpine
+
+# Instalace systémových knihoven a PHP rozšíření pro Laravel
+RUN apk add --no-cache \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    zip \
+    libzip-dev \
+    unzip \
+    oniguruma-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo_mysql mbstring zip exif pcntl gd
+
+# Nastavení pracovního adresáře
+WORKDIR /var/www/html
+
+# Zkopírování kódu a závislostí z první fáze
+COPY . .
+COPY --from=vendor /app/vendor/ vendor/
+
+# Nastavení práv pro Laravel (Storage a Cache)
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+
+# Optimalizace pro produkci
+RUN php artisan config:cache && \
+    php artisan route:cache && \
+    php artisan view:cache
+
+EXPOSE 9000
+CMD ["php-fpm"]
