@@ -6,6 +6,8 @@ services:
         env_file: .env
         volumes:
             - production-app-storage:/var/www/html/storage
+            - app-code:/var/www/html
+            - ./google-auth.json:/var/www/html/google-auth.json
         networks:
             - backend
 
@@ -16,9 +18,9 @@ services:
         ports:
             - "8080:80" # Port 8080 bude ten, který zadáš do NPM
         volumes:
-            - .:/var/www/html
+            - app-code:/var/www/html:ro
+            - production-app-storage:/var/www/html/storage:ro
             - ./nginx.conf:/etc/nginx/conf.d/default.conf
-            - production-app-storage:/var/www/html/storage
         depends_on:
             - laravel.app
         networks:
