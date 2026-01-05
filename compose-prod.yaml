@@ -1,6 +1,6 @@
 services:
     laravel.app:
-        image: ghcr.io/uzivatel/projekt/laravel-app:latest
+        image: ghcr.io/okenagod/knihozrout/laravel-app:latest
         container_name: laravel_app
         restart: always
         env_file: .env
