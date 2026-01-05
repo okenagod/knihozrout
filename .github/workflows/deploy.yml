@@ -71,6 +71,7 @@ jobs:
             # 2. Spustit Laravel příkazy uvnitř běžícího kontejneru
             # Používáme -T (disable pseudo-tty), protože v CI prostředí není terminál
             docker compose -f compose-prod.yaml exec -T laravel.app php artisan migrate --force
+            docker compose -f compose-prod.yaml exec -T laravel.app php artisan storage:link
             docker compose -f compose-prod.yaml exec -T laravel.app php artisan config:cache
             docker compose -f compose-prod.yaml exec -T laravel.app php artisan route:cache
             docker compose -f compose-prod.yaml exec -T laravel.app php artisan view:cache
