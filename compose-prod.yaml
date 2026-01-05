@@ -6,7 +6,6 @@ services:
         env_file: .env
         volumes:
             - production-app-storage:/var/www/html/storage
-            - app-code:/var/www/html
             - ./google-auth.json:/var/www/html/google-auth.json
         networks:
             - backend
