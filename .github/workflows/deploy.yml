@@ -37,15 +37,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4 # Musíme kód "stáhnout" i v tomto jobu, abychom měli přístup k souborům
 
-      - name: Copy compose file via SCP
+      - name: Copy files
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "compose-prod.yaml,serverconfig/nginx.conf" # Seznam souborů, které server potřebuje k běhu
+          source: "compose-prod.yaml"
           target: "/var/www"
-          strip_components: 0
+
+      - name: Copy nginx config
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "serverconfig/nginx.conf"
+          target: "/var/www"
+          strip_components: 1
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
