@@ -1,0 +1,56 @@
+name: deploy.yml
+
+on:
+  push:
+    branches: [ "master" ] # Spustí se při každém pushi do main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.prod
+          push: true
+          tags: ghcr.io/${{ github.repository }}/laravel-app:latest
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /var/www
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            # 1. Stáhnout nový obraz a restartovat kontejnery
+            docker compose -f compose-prod.yaml pull
+            docker compose -f compose-prod.yaml up -d
+            # 2. Spustit Laravel příkazy uvnitř běžícího kontejneru
+            # Používáme -T (disable pseudo-tty), protože v CI prostředí není terminál
+            docker compose -f compose-prod.yaml exec -T laravel.app php artisan migrate --force
+            docker compose -f compose-prod.yaml exec -T laravel.app php artisan config:cache
+            docker compose -f compose-prod.yaml exec -T laravel.app php artisan route:cache
+            docker compose -f compose-prod.yaml exec -T laravel.app php artisan view:cache
+            # 3. Úklid starých obrazů kvůli místu na disku
+            docker image prune -f

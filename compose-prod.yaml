@@ -1,10 +1,7 @@
 services:
-    # PHP Aplikace
     laravel.app:
-        build:
-            context: .
-            dockerfile: Dockerfile.prod
-        image: my-laravel-app/php
+        image: ghcr.io/uzivatel/projekt/laravel-app:latest
+        container_name: laravel_app
         restart: always
         env_file: .env
         networks:
