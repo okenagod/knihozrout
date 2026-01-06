@@ -4,7 +4,10 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Resources\BookResource;
 use App\Models\Book;
+use Filament\Notifications\Notification;
 use Filament\Widgets\Widget;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Routing\Redirector;
 
 class StartReview extends Widget
 {
@@ -12,7 +15,7 @@ class StartReview extends Widget
 
     protected static ?int $sort = 2;
 
-    public function startReview()
+    public function startReview(): RedirectResponse|Redirector
     {
         $nextBook = Book::where('status', 'review')->first();
 
@@ -21,9 +24,11 @@ class StartReview extends Widget
             return redirect(BookResource::getUrl('edit', ['record' => $nextBook]));
         }
 
-        \Filament\Notifications\Notification::make()
+        Notification::make()
             ->title('Žádné knihy ke kontrole')
             ->info()
             ->send();
+
+        return redirect(BookResource::getUrl('list'));
     }
 }
