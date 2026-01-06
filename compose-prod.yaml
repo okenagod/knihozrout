@@ -5,6 +5,7 @@ services:
         restart: always
         env_file: .env
         volumes:
+            - app-public:/var/www/html/public
             - production-app-storage:/var/www/html/storage
             - ./google-auth.json:/var/www/html/google-auth.json
         networks:
@@ -17,7 +18,7 @@ services:
         ports:
             - "8080:80" # Port 8080 bude ten, který zadáš do NPM
         volumes:
-            - app-code:/var/www/html
+            - app-public:/var/www/html/public
             - production-public-storage:/var/www/html/public/storage
             - ./nginx.conf:/etc/nginx/conf.d/default.conf
         depends_on:
@@ -65,4 +66,4 @@ volumes:
             type: none
             o: bind
             device: /srv/volume/knihozrout/storage/app/public
-    app-code:
+    app-public:
