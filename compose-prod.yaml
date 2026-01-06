@@ -17,6 +17,7 @@ services:
         ports:
             - "8080:80" # Port 8080 bude ten, který zadáš do NPM
         volumes:
+            - app-code:/var/www/html
             - production-public-storage:/var/www/html/public/storage
             - ./nginx.conf:/etc/nginx/conf.d/default.conf
         depends_on:
