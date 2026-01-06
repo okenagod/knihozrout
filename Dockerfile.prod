@@ -24,12 +24,15 @@ RUN apk add --no-cache \
     unzip \
     oniguruma-dev \
     icu-dev \
+    tzdata \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install pdo_mysql mbstring zip exif pcntl gd bcmath \
     && docker-php-ext-install intl
 
 RUN echo "upload_max_filesize=50M" > /usr/local/etc/php/conf.d/uploads.ini \
     && echo "post_max_size=50M" >> /usr/local/etc/php/conf.d/uploads.ini
+
+ENV TZ=Europe/Prague
 
 # Nastavení pracovního adresáře
 WORKDIR /var/www/html
