@@ -27,6 +27,9 @@ RUN apk add --no-cache \
     && docker-php-ext-install pdo_mysql mbstring zip exif pcntl gd \
     && docker-php-ext-install intl
 
+RUN echo "upload_max_filesize=50M" > /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "post_max_size=50M" >> /usr/local/etc/php/conf.d/uploads.ini
+
 # Nastavení pracovního adresáře
 WORKDIR /var/www/html
 
