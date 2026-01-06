@@ -25,7 +25,7 @@ RUN apk add --no-cache \
     oniguruma-dev \
     icu-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
-    && docker-php-ext-install pdo_mysql mbstring zip exif pcntl gd \
+    && docker-php-ext-install pdo_mysql mbstring zip exif pcntl gd bcmath \
     && docker-php-ext-install intl
 
 RUN echo "upload_max_filesize=50M" > /usr/local/etc/php/conf.d/uploads.ini \
