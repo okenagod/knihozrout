@@ -63,6 +63,11 @@ return [
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
+            'formatter' => Monolog\Formatter\LineFormatter::class,
+            'formatter_with' => [
+	            'format' => "[%datetime%] %channel%.%level_name%: %message% %context% %extra%\n",
+	            'dateFormat' => 'Y-m-d H:i:s',
+            ],
         ],
 
         'daily' => [
@@ -71,6 +76,11 @@ return [
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
             'replace_placeholders' => true,
+            'formatter' => Monolog\Formatter\LineFormatter::class,
+            'formatter_with' => [
+	            'format' => "[%datetime%] %channel%.%level_name%: %message% %context% %extra%\n",
+	            'dateFormat' => 'Y-m-d H:i:s',
+            ],
         ],
 
         'slack' => [
