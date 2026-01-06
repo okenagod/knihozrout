@@ -17,9 +17,9 @@ services:
     image: ghcr.io/okenagod/knihozrout/laravel-app:latest
     restart: always
     env_file: .env
+    command: php artisan queue:work --memory=64 --sleep=3 --tries=3
     depends_on:
       - mysql
-    command: php artisan queue:work --memory=64 --sleep=3 --tries=3
     volumes:
       - production-app-storage:/var/www/html/storage
       - ./google-auth.json:/var/www/html/google-auth.json

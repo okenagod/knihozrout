@@ -37,13 +37,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4 # Musíme kód "stáhnout" i v tomto jobu, abychom měli přístup k souborům
 
+      - name: Prepare compose file
+        run: cp compose-prod.yaml compose.yaml
+
       - name: Copy files
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "compose-prod.yaml"
+          source: "compose.yaml"
           target: "/var/www"
 
       - name: Copy nginx config
@@ -66,14 +69,14 @@ jobs:
             cd /var/www
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             # 1. Stáhnout nový obraz a restartovat kontejnery
-            docker compose -f compose-prod.yaml pull
-            docker compose -f compose-prod.yaml up -d
+            docker compose pull
+            docker compose up -d
             # 2. Spustit Laravel příkazy uvnitř běžícího kontejneru
             # Používáme -T (disable pseudo-tty), protože v CI prostředí není terminál
-            docker compose -f compose-prod.yaml exec -T laravel.app php artisan migrate --force
-            docker compose -f compose-prod.yaml exec -T laravel.app php artisan storage:link
-            docker compose -f compose-prod.yaml exec -T laravel.app php artisan config:cache
-            docker compose -f compose-prod.yaml exec -T laravel.app php artisan route:cache
-            docker compose -f compose-prod.yaml exec -T laravel.app php artisan view:cache
+            docker compose exec -T laravel.app php artisan migrate --force
+            docker compose exec -T laravel.app php artisan storage:link
+            docker compose exec -T laravel.app php artisan config:cache
+            docker compose exec -T laravel.app php artisan route:cache
+            docker compose exec -T laravel.app php artisan view:cache
             # 3. Úklid starých obrazů kvůli místu na disku
             docker image prune -f
