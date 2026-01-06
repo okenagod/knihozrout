@@ -70,7 +70,7 @@ jobs:
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             # 1. Stáhnout nový obraz a restartovat kontejnery
             docker compose pull
-            docker compose up -d
+            docker compose up -d --force-recreate
             # 2. Spustit Laravel příkazy uvnitř běžícího kontejneru
             # Používáme -T (disable pseudo-tty), protože v CI prostředí není terminál
             docker compose exec -T laravel.app php artisan migrate --force
