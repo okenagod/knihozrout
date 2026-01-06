@@ -36,7 +36,8 @@ class BookOcrService
 		$fullText = "";
 		$imageRequests = [];
 
-		$path = Storage::disk('public')->path($book->main_photo);
+        // Zkusíme najít originál pro lepší OCR
+        $path = $this->getOriginalPath($book->main_photo);
 		$content = file_get_contents($path);
 
 		$image = (new Image())->setContent($content);
@@ -85,6 +86,29 @@ class BookOcrService
 		$book->status = 'review';
 		$book->save();
 	}
+
+    /**
+     * Zkusí najít originální soubor pro danou cestu. Pokud neexistuje, vrátí cestu k optimalizovanému.
+     */
+    protected function getOriginalPath(string $path): string
+    {
+        $directory = dirname($path);
+        $filename = basename($path);
+        $filenameWithoutExt = pathinfo($filename, PATHINFO_FILENAME);
+        
+        $originalFolder = $directory . '/original/';
+        
+        if (Storage::disk('public')->exists($originalFolder)) {
+            $files = Storage::disk('public')->files($originalFolder);
+            foreach ($files as $file) {
+                if (pathinfo($file, PATHINFO_FILENAME) === $filenameWithoutExt) {
+                    return Storage::disk('public')->path($file);
+                }
+            }
+        }
+        
+        return Storage::disk('public')->path($path);
+    }
 
 	/**
 	 * Aktualizuje text pomocí regulárních výrazů pro poskytnutou knihu.
