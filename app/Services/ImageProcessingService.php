@@ -3,71 +3,71 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManager;
 
 class ImageProcessingService
 {
-	protected ImageManager $manager;
+    protected ImageManager $manager;
 
-	public function __construct()
-	{
-		$this->manager = new ImageManager(new Driver());
-	}
+    public function __construct()
+    {
+        $this->manager = new ImageManager(new Driver);
+    }
 
-	/**
-	 * Zpracuje obrázek: uloží originál do podslozky 'original' a vytvoří optimalizovaný WebP v hlavním slozce.
-	 *
-	 * @param string $path Relativní cesta k souboru v rámci 'public' disku.
-	 *
-	 * @return string|null Nová cesta k optimalizovanému souboru (WebP).
-	 */
-	public function processImage(string $path): ?string
-	{
-		if (!Storage::disk('public')->exists($path))
-		{
-			return null;
-		}
+    /**
+     * Zpracuje obrázek: uloží originál do podslozky 'original' a vytvoří optimalizovaný WebP v hlavním slozce.
+     *
+     * @param  string      $path Relativní cesta k souboru v rámci 'public' disku.
+     * @return string|null Nová cesta k optimalizovanému souboru (WebP).
+     */
+    public function processImage(string $path): ?string
+    {
+        if (! Storage::disk('public')->exists($path))
+        {
+            return null;
+        }
 
-		$fullPath = Storage::disk('public')->path($path);
-		$directory = dirname($path);
-		$filename = basename($path);
-		$filenameWithoutExt = pathinfo($filename, PATHINFO_FILENAME);
+        $fullPath = Storage::disk('public')->path($path);
+        $directory = dirname($path);
+        $filename = basename($path);
+        $filenameWithoutExt = pathinfo($filename, PATHINFO_FILENAME);
 
-		// 1. Vytvoření složky 'original', pokud neexistuje
-		$originalDirectory = $directory . '/original';
-		if (!Storage::disk('public')->exists($originalDirectory))
-		{
-			Storage::disk('public')->makeDirectory($originalDirectory);
-		}
+        // 1. Vytvoření složky 'original', pokud neexistuje
+        $originalDirectory = $directory . '/original';
+        if (! Storage::disk('public')->exists($originalDirectory))
+        {
+            Storage::disk('public')->makeDirectory($originalDirectory);
+        }
 
-		// 2. Přesun původního souboru do 'original'
-		$originalPath = $originalDirectory . '/' . $filename;
-		Storage::disk('public')->move($path, $originalPath);
+        // 2. Přesun původního souboru do 'original'
+        $originalPath = $originalDirectory . '/' . $filename;
+        Storage::disk('public')->move($path, $originalPath);
 
-		// 3. Vytvoření optimalizované verze (WebP)
-		$optimizedFilename = $filenameWithoutExt . '.webp';
-		$optimizedPath = $directory . '/' . $optimizedFilename;
-		$optimizedFullPath = Storage::disk('public')->path($optimizedPath);
+        // 3. Vytvoření optimalizované verze (WebP)
+        $optimizedFilename = $filenameWithoutExt . '.webp';
+        $optimizedPath = $directory . '/' . $optimizedFilename;
+        $optimizedFullPath = Storage::disk('public')->path($optimizedPath);
 
-		try
-		{
-			$image = $this->manager->read(Storage::disk('public')->path($originalPath));
+        try
+        {
+            $image = $this->manager->read(Storage::disk('public')->path($originalPath));
 
-			// Změna velikosti (např. max šířka 1600px, zachování poměru stran)
-			$image->scale(width: 1600);
+            // Změna velikosti (např. max šířka 1600px, zachování poměru stran)
+            $image->scale(width: 1600);
 
-			// Uložení jako WebP s rozumnou kvalitou
-			$image->toWebp(quality: 80)->save($optimizedFullPath);
+            // Uložení jako WebP s rozumnou kvalitou
+            $image->toWebp(quality: 80)->save($optimizedFullPath);
 
-			return $optimizedPath;
-		}
-		catch (\Exception $e)
-		{
-			\Log::error("Image processing error: " . $e->getMessage());
-			// Pokud selže zpracování, vrátíme původní soubor zpět (nebo necháme v original a vrátíme cestu k němu)
-			// Ale raději zkusíme vrátit aspoň něco.
-			return $originalPath;
-		}
-	}
+            return $optimizedPath;
+        }
+        catch (\Exception $e)
+        {
+            \Log::error('Image processing error: ' . $e->getMessage());
+
+            // Pokud selže zpracování, vrátíme původní soubor zpět (nebo necháme v original a vrátíme cestu k němu)
+            // Ale raději zkusíme vrátit aspoň něco.
+            return $originalPath;
+        }
+    }
 }

@@ -20,16 +20,16 @@ class GoogleBooksConnectorTest extends TestCase
                         'authors' => ['Jane Smith'],
                         'publisher' => 'Google Publishing',
                         'publishedDate' => '2022-01-01',
-                    ]
-                ]
-            ]
+                    ],
+                ],
+            ],
         ];
 
         Http::fake([
             'www.googleapis.com/*' => Http::response($jsonResponse, 200),
         ]);
 
-        $connector = new GoogleBooksConnector();
+        $connector = new GoogleBooksConnector;
         $result = $connector->fetch($isbn);
 
         $this->assertNotNull($result);
@@ -43,14 +43,14 @@ class GoogleBooksConnectorTest extends TestCase
     {
         $isbn = '9999999999';
         $jsonResponse = [
-            'totalItems' => 0
+            'totalItems' => 0,
         ];
 
         Http::fake([
             'www.googleapis.com/*' => Http::response($jsonResponse, 200),
         ]);
 
-        $connector = new GoogleBooksConnector();
+        $connector = new GoogleBooksConnector;
         $result = $connector->fetch($isbn);
 
         $this->assertNull($result);

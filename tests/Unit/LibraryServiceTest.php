@@ -23,8 +23,8 @@ class LibraryServiceTest extends TestCase
         $connector3 = $this->createMock(LibraryConnectorInterface::class);
         $connector3->expects($this->never())->method('fetch');
 
-        $service = new LibraryService();
-        
+        $service = new LibraryService;
+
         // Injecting mocks into the connectors array via reflection since they are hardcoded in constructor
         $reflection = new \ReflectionClass($service);
         $property = $reflection->getProperty('connectors');
@@ -43,8 +43,8 @@ class LibraryServiceTest extends TestCase
         $connector1 = $this->createMock(LibraryConnectorInterface::class);
         $connector1->method('fetch')->willReturn(null);
 
-        $service = new LibraryService();
-        
+        $service = new LibraryService;
+
         $reflection = new \ReflectionClass($service);
         $property = $reflection->getProperty('connectors');
         $property->setAccessible(true);

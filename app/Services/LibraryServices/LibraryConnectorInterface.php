@@ -6,5 +6,5 @@ use App\DTO\BookData;
 
 interface LibraryConnectorInterface
 {
-	public function fetch(string $isbn): ?BookData;
+    public function fetch(string $isbn): ?BookData;
 }

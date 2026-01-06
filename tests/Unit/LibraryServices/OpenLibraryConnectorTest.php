@@ -17,14 +17,14 @@ class OpenLibraryConnectorTest extends TestCase
                 'authors' => [['name' => 'John Doe']],
                 'publishers' => [['name' => 'Test Publisher']],
                 'publish_date' => '2023',
-            ]
+            ],
         ];
 
         Http::fake([
             'openlibrary.org/*' => Http::response($jsonResponse, 200),
         ]);
 
-        $connector = new OpenLibraryConnector();
+        $connector = new OpenLibraryConnector;
         $result = $connector->fetch($isbn);
 
         $this->assertNotNull($result);
@@ -41,7 +41,7 @@ class OpenLibraryConnectorTest extends TestCase
             'openlibrary.org/*' => Http::response([], 200),
         ]);
 
-        $connector = new OpenLibraryConnector();
+        $connector = new OpenLibraryConnector;
         $result = $connector->fetch($isbn);
 
         $this->assertNull($result);

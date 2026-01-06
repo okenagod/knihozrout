@@ -11,7 +11,7 @@ class NkpConnectorTest extends TestCase
     public function test_it_can_fetch_book_data_from_nkp()
     {
         $isbn = '807226575X';
-        $xmlResponse = <<<XML
+        $xmlResponse = <<<'XML'
 <zs:searchRetrieveResponse xmlns:zs="http://www.loc.gov/zing/srw/">
     <zs:numberOfRecords>1</zs:numberOfRecords>
     <zs:records>
@@ -41,7 +41,7 @@ XML;
             'aleph.nkp.cz/*' => Http::response($xmlResponse, 200),
         ]);
 
-        $connector = new NkpConnector();
+        $connector = new NkpConnector;
         $result = $connector->fetch($isbn);
 
         $this->assertNotNull($result);
@@ -54,7 +54,7 @@ XML;
     public function test_it_returns_null_when_nkp_returns_no_records()
     {
         $isbn = '0000000000';
-        $xmlResponse = <<<XML
+        $xmlResponse = <<<'XML'
 <zs:searchRetrieveResponse xmlns:zs="http://www.loc.gov/zing/srw/">
     <zs:numberOfRecords>0</zs:numberOfRecords>
     <zs:records></zs:records>
@@ -65,7 +65,7 @@ XML;
             'aleph.nkp.cz/*' => Http::response($xmlResponse, 200),
         ]);
 
-        $connector = new NkpConnector();
+        $connector = new NkpConnector;
         $result = $connector->fetch($isbn);
 
         $this->assertNull($result);

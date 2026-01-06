@@ -18,74 +18,76 @@ use Illuminate\Support\Facades\Storage;
  */
 class BookOcrService
 {
-	public function processBook(Book $book)
-	{
-		// Kontrola, zda kniha vůbec má fotky
-		if (!$book->main_photo)
-		{
-			$book->ocr_full_text = 'Žádné fotky k analýze.';
-			$book->save();
-			return;
-		}
+    public function processBook(Book $book)
+    {
+        // Kontrola, zda kniha vůbec má fotky
+        if (! $book->main_photo)
+        {
+            $book->ocr_full_text = 'Žádné fotky k analýze.';
+            $book->save();
 
-		// Vytvoření klienta ( credentials bere automaticky z .env GOOGLE_APPLICATION_CREDENTIALS )
-		$client = new ImageAnnotatorClient([
-			                                   'credentials' => base_path(env('GOOGLE_APPLICATION_CREDENTIALS'))
-		                                   ]);
+            return;
+        }
 
-		$fullText = "";
-		$imageRequests = [];
+        // Vytvoření klienta ( credentials bere automaticky z configu )
+        $client = new ImageAnnotatorClient([
+            'credentials' => base_path(config('services.google.vision_credentials')),
+        ]);
+
+        $fullText = '';
+        $imageRequests = [];
 
         // Zkusíme najít originál pro lepší OCR
         $path = $this->getOriginalPath($book->main_photo);
-		$content = file_get_contents($path);
+        $content = file_get_contents($path);
 
-		$image = (new Image())->setContent($content);
-		$feature = (new Feature())->setType(Type::TEXT_DETECTION);
+        $image = (new Image)->setContent($content);
+        $feature = (new Feature)->setType(Type::TEXT_DETECTION);
 
-		// Jednotlivý požadavek na jednu fotku
-		$imageRequests[] = (new AnnotateImageRequest())
-			->setImage($image)
-			->setFeatures([$feature]);
+        // Jednotlivý požadavek na jednu fotku
+        $imageRequests[] = (new AnnotateImageRequest)
+            ->setImage($image)
+            ->setFeatures([$feature]);
 
-		if (empty($imageRequests))
-		{
-			return;
-		}
+        if (!count($imageRequests))
+        {
+            return;
+        }
 
-		// Obalení do Batch požadavku
-		$batchRequest = (new BatchAnnotateImagesRequest())
-			->setRequests($imageRequests);
+        // Obalení do Batch požadavku
+        $batchRequest = (new BatchAnnotateImagesRequest)
+            ->setRequests($imageRequests);
 
-		// Odeslání
-		$response = $client->batchAnnotateImages($batchRequest);
-		$responses = $response->getResponses();
+        // Odeslání
+        $response = $client->batchAnnotateImages($batchRequest);
+        $responses = $response->getResponses();
 
-		foreach ($responses as $res)
-		{
-			if ($res->hasError())
-			{
-				\Log::error('Google OCR Error: ' . $res->getError()->getMessage());
-				continue;
-			}
+        foreach ($responses as $res)
+        {
+            if ($res->hasError())
+            {
+                \Log::error('Google OCR Error: ' . $res->getError()->getMessage());
 
-			$annotation = $res->getFullTextAnnotation();
-			if ($annotation)
-			{
-				$fullText .= $annotation->getText() . "\n";
-			}
-		}
+                continue;
+            }
 
-		$client->close();
+            $annotation = $res->getFullTextAnnotation();
+            if ($annotation)
+            {
+                $fullText .= $annotation->getText() . "\n";
+            }
+        }
 
-		// Uložení a analýza
-		$book->ocr_full_text = $fullText;
+        $client->close();
 
-		$this->updateRegexText($book);
+        // Uložení a analýza
+        $book->ocr_full_text = $fullText;
 
-		$book->status = 'review';
-		$book->save();
-	}
+        $this->updateRegexText($book);
+
+        $book->status = 'review';
+        $book->save();
+    }
 
     /**
      * Zkusí najít originální soubor pro danou cestu. Pokud neexistuje, vrátí cestu k optimalizovanému.
@@ -95,86 +97,87 @@ class BookOcrService
         $directory = dirname($path);
         $filename = basename($path);
         $filenameWithoutExt = pathinfo($filename, PATHINFO_FILENAME);
-        
+
         $originalFolder = $directory . '/original/';
-        
-        if (Storage::disk('public')->exists($originalFolder)) {
+
+        if (Storage::disk('public')->exists($originalFolder))
+        {
             $files = Storage::disk('public')->files($originalFolder);
-            foreach ($files as $file) {
-                if (pathinfo($file, PATHINFO_FILENAME) === $filenameWithoutExt) {
+            foreach ($files as $file)
+            {
+                if (pathinfo($file, PATHINFO_FILENAME) === $filenameWithoutExt)
+                {
                     return Storage::disk('public')->path($file);
                 }
             }
         }
-        
+
         return Storage::disk('public')->path($path);
     }
 
-	/**
-	 * Aktualizuje text pomocí regulárních výrazů pro poskytnutou knihu.
-	 * Pokud kniha nemá nastaveno ISBN, pokusí se jej určit pomocí metody getRegexIsbn.
-	 * Pokud kniha nemá nastavený název a je označena jako starožitná,
-	 * pokusí se odvodit název z jejího textu pomocí metody getTitle.
-	 *
-	 * @param Book $book Kniha, která má být aktualizována.
-	 *
-	 * @return void
-	 */
-	public function updateRegexText(Book $book): void
-	{
-		if (!$book->isbn)
-		{
-			$book->isbn = $this->getRegexIsbn($book);
-		}
+    /**
+     * Aktualizuje text pomocí regulárních výrazů pro poskytnutou knihu.
+     * Pokud kniha nemá nastaveno ISBN, pokusí se jej určit pomocí metody getRegexIsbn.
+     * Pokud kniha nemá nastavený název a je označena jako starožitná,
+     * pokusí se odvodit název z jejího textu pomocí metody getTitle.
+     *
+     * @param Book $book Kniha, která má být aktualizována.
+     */
+    public function updateRegexText(Book $book): void
+    {
+        if (! $book->isbn)
+        {
+            $book->isbn = $this->getRegexIsbn($book);
+        }
 
-		if (!$book->title && $book->is_antique)
-		{
-			$book->title = $this->getTitle($book);
-		}
-	}
+        if (! $book->title && $book->is_antique)
+        {
+            $book->title = $this->getTitle($book);
+        }
+    }
 
-	/**
-	 * Load first line from OCR text as title
-	 */
-	protected function getTitle(Book $book)
-	{
-		$lines = collect(explode("\n", $book->ocr_full_text))->map(fn($l) => trim($l))->filter();
-		return $lines->first();
-	}
+    /**
+     * Load first line from OCR text as title
+     */
+    protected function getTitle(Book $book)
+    {
+        $lines = collect(explode("\n", $book->ocr_full_text))->map(fn ($l) => trim($l))->filter();
 
-	/**
-	 * Extracts an ISBN or alternative identifier from the book's OCR full text.
-	 *
-	 * This method attempts to locate and validate a standard ISBN-10 or ISBN-13 format
-	 * within the full text of the book. If none is found and the book is marked as antique,
-	 * it further searches for a custom SPN-like code.
-	 *
-	 * @param Book $book The book entity containing OCR full text and antique status.
-	 *
-	 * @return string|null Returns a validated ISBN or custom identifier, or null if none found.
-	 */
-	protected function getRegexIsbn(Book $book): string|null
-	{
-		$fullText = $book->ocr_full_text;
+        return $lines->first();
+    }
 
-		// 1. Hledáme cokoli, co vypadá jako ISBN (10 nebo 13 číslic, i s pomlčkami)
-		if (preg_match('/(?:ISBN(?:-1[03])?:?\s*)?([0-9Xx\s-]{10,20})/i', $fullText, $matches))
-		{
-			$cleanIsbn = preg_replace('/[^0-9Xx\-]/', '', $matches[1]);
+    /**
+     * Extracts an ISBN or alternative identifier from the book's OCR full text.
+     *
+     * This method attempts to locate and validate a standard ISBN-10 or ISBN-13 format
+     * within the full text of the book. If none is found and the book is marked as antique,
+     * it further searches for a custom SPN-like code.
+     *
+     * @param  Book        $book The book entity containing OCR full text and antique status.
+     * @return string|null Returns a validated ISBN or custom identifier, or null if none found.
+     */
+    protected function getRegexIsbn(Book $book): ?string
+    {
+        $fullText = $book->ocr_full_text;
 
-			// Validace: ISBN má mít 10 nebo 13 znaků
-			if (strlen($cleanIsbn) === 10 || strlen($cleanIsbn) === 13)
-			{
-				return $cleanIsbn;
-			}
-		}
+        // 1. Hledáme cokoli, co vypadá jako ISBN (10 nebo 13 číslic, i s pomlčkami)
+        if (preg_match('/(?:ISBN(?:-1[03])?:?\s*)?([0-9Xx\s-]{10,20})/i', $fullText, $matches))
+        {
+            $cleanIsbn = preg_replace('/[^0-9Xx\-]/', '', $matches[1]);
 
-		// 2. Pokud je to antikvární (is_antique), zkusíme najít ten tvůj SPN kód (např. 14-45-76)
-		if ($book->is_antique && preg_match('/(\d{2}-\d{2,3}-\d{2})/i', $fullText, $matches))
-		{
-			return $matches[1]; // Pro staré knihy uložíme kód jako identifikátor
-		}
+            // Validace: ISBN má mít 10 nebo 13 znaků
+            if (strlen($cleanIsbn) === 10 || strlen($cleanIsbn) === 13)
+            {
+                return $cleanIsbn;
+            }
+        }
 
-		return null;
-	}
+        // 2. Pokud je to antikvární (is_antique), zkusíme najít ten tvůj SPN kód (např. 14-45-76)
+        if ($book->is_antique && preg_match('/(\d{2}-\d{2,3}-\d{2})/i', $fullText, $matches))
+        {
+            return $matches[1]; // Pro staré knihy uložíme kód jako identifikátor
+        }
+
+        return null;
+    }
 }
