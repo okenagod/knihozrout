@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Filament\Resources\BookResource;
 use App\Models\Book;
 use Filament\Notifications\Notification;
+use Filament\Pages\Dashboard;
 use Filament\Widgets\Widget;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Redirector;
@@ -29,6 +30,6 @@ class StartReview extends Widget
             ->info()
             ->send();
 
-        return redirect(BookResource::getUrl('list'));
+        return redirect(Dashboard::getUrl());
     }
 }
