@@ -3,14 +3,20 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Book extends Model
 {
-    // Vypne ochranu a povolí ukládání všech sloupců, které máš v migraci
     protected $guarded = [];
 
-    // Tady probíhá ta "magie" – Laravel automaticky převede pole na JSON a zpět
     protected $casts = [
         'photos' => 'array',
+        'minPrice' => 'decimal:2',
+        'maxPrice' => 'decimal:2',
     ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 }
