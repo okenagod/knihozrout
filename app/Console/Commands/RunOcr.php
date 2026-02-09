@@ -29,6 +29,12 @@ class RunOcr extends Command
      */
     protected $description = 'Spustí OCR u knih, které ještě nebyly zpracovány.';
 
+    public function __construct(
+        private BookOcrService $service
+    ) {
+        parent::__construct();
+    }
+
     /**
      * Processes books by detecting and handling books that require OCR processing.
      *
@@ -46,7 +52,6 @@ class RunOcr extends Command
     public function handle()
     {
         $id = $this->argument('id');
-        $service = new BookOcrService;
 
         if ($id)
         {
@@ -79,7 +84,7 @@ class RunOcr extends Command
 
             try
             {
-                $service->processBook($book);
+                $this->service->processBook($book);
                 $this->info("Kniha {$book->id} zpracována. Nalezený text délky: " . strlen($book->ocr_full_text));
                 if ($book->isbn)
                 {

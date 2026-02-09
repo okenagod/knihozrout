@@ -3,39 +3,36 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 
 class ImageProcessingService
 {
-    protected ImageManager $manager;
-
-    public function __construct()
-    {
-        $this->manager = new ImageManager(new Driver);
-    }
+    public function __construct(
+        private ImageManager $manager
+    ) {}
 
     /**
      * Zpracuje obrázek: uloží originál do podslozky 'original' a vytvoří optimalizovaný WebP v hlavním slozce.
      *
-     * @param  string      $path Relativní cesta k souboru v rámci 'public' disku.
+     * @param string $path Relativní cesta k souboru v rámci 'public' disku.
+     *
      * @return string|null Nová cesta k optimalizovanému souboru (WebP).
      */
     public function processImage(string $path): ?string
     {
-        if (! Storage::disk('public')->exists($path))
+        if (!Storage::disk('public')->exists($path))
         {
             return null;
         }
 
-        $fullPath = Storage::disk('public')->path($path);
+        //        $fullPath = Storage::disk('public')->path($path);
         $directory = dirname($path);
         $filename = basename($path);
         $filenameWithoutExt = pathinfo($filename, PATHINFO_FILENAME);
 
         // 1. Vytvoření složky 'original', pokud neexistuje
         $originalDirectory = $directory . '/original';
-        if (! Storage::disk('public')->exists($originalDirectory))
+        if (!Storage::disk('public')->exists($originalDirectory))
         {
             Storage::disk('public')->makeDirectory($originalDirectory);
         }

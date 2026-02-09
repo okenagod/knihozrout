@@ -18,21 +18,25 @@ use Illuminate\Support\Facades\Storage;
  */
 class BookOcrService
 {
+    public function __construct(
+        private ImageAnnotatorClient $client
+    ) {}
+
+    public function __destruct()
+    {
+        $this->client->close();
+    }
+
     public function processBook(Book $book)
     {
         // Kontrola, zda kniha vůbec má fotky
-        if (! $book->main_photo)
+        if (!$book->main_photo)
         {
             $book->ocr_full_text = 'Žádné fotky k analýze.';
             $book->save();
 
             return;
         }
-
-        // Vytvoření klienta ( credentials bere automaticky z configu )
-        $client = new ImageAnnotatorClient([
-            'credentials' => base_path(config('services.google.vision_credentials')),
-        ]);
 
         $fullText = '';
         $imageRequests = [];
@@ -59,7 +63,7 @@ class BookOcrService
             ->setRequests($imageRequests);
 
         // Odeslání
-        $response = $client->batchAnnotateImages($batchRequest);
+        $response = $this->client->batchAnnotateImages($batchRequest);
         $responses = $response->getResponses();
 
         foreach ($responses as $res)
@@ -77,8 +81,6 @@ class BookOcrService
                 $fullText .= $annotation->getText() . "\n";
             }
         }
-
-        $client->close();
 
         // Uložení a analýza
         $book->ocr_full_text = $fullText;
@@ -125,12 +127,12 @@ class BookOcrService
      */
     public function updateRegexText(Book $book): void
     {
-        if (! $book->isbn)
+        if (!$book->isbn)
         {
             $book->isbn = $this->getRegexIsbn($book);
         }
 
-        if (! $book->title && $book->is_antique)
+        if (!$book->title && $book->is_antique)
         {
             $book->title = $this->getTitle($book);
         }
@@ -141,7 +143,7 @@ class BookOcrService
      */
     protected function getTitle(Book $book)
     {
-        $lines = collect(explode("\n", $book->ocr_full_text))->map(fn ($l) => trim($l))->filter();
+        $lines = collect(explode("\n", $book->ocr_full_text))->map(fn($l) => trim($l))->filter();
 
         return $lines->first();
     }
@@ -153,7 +155,8 @@ class BookOcrService
      * within the full text of the book. If none is found and the book is marked as antique,
      * it further searches for a custom SPN-like code.
      *
-     * @param  Book        $book The book entity containing OCR full text and antique status.
+     * @param Book $book The book entity containing OCR full text and antique status.
+     *
      * @return string|null Returns a validated ISBN or custom identifier, or null if none found.
      */
     protected function getRegexIsbn(Book $book): ?string
