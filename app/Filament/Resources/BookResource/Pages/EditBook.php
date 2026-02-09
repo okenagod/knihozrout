@@ -3,9 +3,16 @@
 namespace App\Filament\Resources\BookResource\Pages;
 
 use App\Filament\Resources\BookResource;
+use App\Models\Book;
+use App\Services\BookOcrService;
+use App\Services\LibraryService;
 use Filament\Actions;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 
+/**
+ * @property Book $record
+ */
 class EditBook extends EditRecord
 {
     protected static string $resource = BookResource::class;
@@ -13,7 +20,26 @@ class EditBook extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            // approve book and return to book list
+            Actions\Action::make('runOcr')
+                ->label('Spustit OCR')
+                ->icon('heroicon-o-sparkles')
+                ->color('gray')
+                ->action(function (BookOcrService $ocrService) {
+                    $ocrService->processBook($this->record);
+                    $this->refreshFormData(['ocr_full_text', 'isbn']);
+                    Notification::make()->title('OCR bylo dokončeno.')->success()->send();
+                }),
+
+            Actions\Action::make('findInfo')
+                ->label('Najít informace')
+                ->icon('heroicon-o-magnifying-glass')
+                ->color('gray')
+                ->action(function (LibraryService $libraryService) {
+                    $libraryService->processBook($this->record);
+                    $this->refreshFormData(['title', 'author', 'publisher', 'year']);
+                    Notification::make()->title('Vyhledávání dokončeno.')->success()->send();
+                }),
+
             Actions\Action::make('approve')
                 ->label('Schválit')
                 ->color('success')
@@ -22,14 +48,13 @@ class EditBook extends EditRecord
                     $this->data['status'] = 'done';
                     $this->save();
 
-                    \Filament\Notifications\Notification::make()
+                    Notification::make()
                         ->title('Kniha byla schválena a uložena')
                         ->success()
                         ->send();
 
                     return redirect($this->getResource()::getUrl('index'));
                 }),
-            // approve book and go to next review
             Actions\Action::make('approveAndNext')
                 ->label('Schválit a další')
                 ->color('success')
@@ -38,12 +63,12 @@ class EditBook extends EditRecord
                     $this->data['status'] = 'done';
                     $this->save();
 
-                    /** @var \App\Models\Book|null $nextBook */
-                    $nextBook = \App\Models\Book::where('status', 'review')
+                    /** @var Book|null $nextBook */
+                    $nextBook = Book::where('status', 'review')
                         ->where('id', '!=', $this->record->getKey())
                         ->first();
 
-                    \Filament\Notifications\Notification::make()
+                    Notification::make()
                         ->title('Kniha schválena')
                         ->success()
                         ->send();
@@ -53,7 +78,7 @@ class EditBook extends EditRecord
                         return redirect($this->getResource()::getUrl('edit', ['record' => $nextBook]));
                     }
 
-                    \Filament\Notifications\Notification::make()
+                    Notification::make()
                         ->title('Žádné knihy ke kontrole')
                         ->info()
                         ->send();
@@ -64,7 +89,6 @@ class EditBook extends EditRecord
                 ->label('Uložit')
                 ->action('save'),
             $this->getCancelFormAction(),
-            //			Actions\DeleteAction::make(),
         ];
     }
 
