@@ -87,6 +87,12 @@ class BookResource extends Resource
             return $form->schema([
                 Comp\Section::make('Rychlý sběr dat')
                     ->schema([
+                        Comp\Select::make('user_id')
+                            ->relationship('user', 'name')
+                            ->label('Uživatel')
+                            ->searchable()
+                            ->preload()
+                            ->required(),
                         $binNumber,
                         $classification,
                         $antique,
@@ -99,6 +105,12 @@ class BookResource extends Resource
         {
             // FORMULÁŘ PRO EDITACI (Kontrola u PC)
             $bookInfo = [
+                Comp\Select::make('user_id')
+                    ->relationship('user', 'name')
+                    ->label('Uživatel')
+                    ->searchable()
+                    ->preload()
+                    ->required(),
                 $binNumber,
                 Comp\TextInput::make('title')->label('Název'),
                 Comp\TextInput::make('author')->label('Autor'),
@@ -152,6 +164,9 @@ class BookResource extends Resource
                         'review' => 'Ke kontrole',
                         'done' => 'Hotovo',
                     ])->default('new'),
+                Comp\Textarea::make('note')->label('Poznámka')->rows(3),
+                Comp\TextInput::make('minPrice')->label('Minimální cena')->numeric()->prefix('Kč'),
+                Comp\TextInput::make('maxPrice')->label('Maximální cena')->numeric()->prefix('Kč'),
             ];
 
             return $form->schema([
@@ -159,7 +174,7 @@ class BookResource extends Resource
                     $photoDisplay
                         ->extraAttributes([
                             'class' => 'sticky top-5 flex-shrink-0',
-                            'style' => 'max-height: calc(100vh - 80px); overflow-y: auto;', // Změněno na min-width
+                            'style' => 'max-height: calc(100vh - 80px); overflow-y: auto;',
                         ]),
                     Comp\Grid::make(2)
                         ->schema([
@@ -172,7 +187,7 @@ class BookResource extends Resource
                         ])
                         ->grow()
                         ->extraAttributes([
-                            'style' => 'flex-grow: 1; min-width: 0;', // Pojistka pro flexbox, aby pravá strana nezmizela
+                            'style' => 'flex-grow: 1; min-width: 0;',
                         ]),
                 ])
                     ->from('md')
@@ -185,7 +200,6 @@ class BookResource extends Resource
     {
         return $table
             ->columns([
-                // Zobrazí první fotku z pole fotek
                 Tables\Columns\ImageColumn::make('photos')
                     ->label('Foto')
                     ->height(120)
@@ -198,18 +212,19 @@ class BookResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->description(fn ($record) => $record->author),
-
+                Tables\Columns\TextColumn::make('user.name')
+                    ->label('Vlastník')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('isbn')
                     ->label('ISBN / SPN')
                     ->copyable()
                     ->searchable(),
-
                 Tables\Columns\TextColumn::make('bin_number')
                     ->label('Přepravka')
                     ->badge()
                     ->color('info')
                     ->sortable(),
-
                 Tables\Columns\TextColumn::make('status')
                     ->label('Stav')
                     ->badge()
@@ -220,7 +235,6 @@ class BookResource extends Resource
                         'done' => 'success',
                         default => 'gray',
                     }),
-
                 Tables\Columns\IconColumn::make('is_antique')
                     ->label('Má ISBN')
                     ->boolean()
@@ -228,7 +242,6 @@ class BookResource extends Resource
                     ->falseIcon('heroicon-o-check-circle')
                     ->trueColor('danger')
                     ->falseColor('success'),
-
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Přidáno')
                     ->dateTime('d.m. H:i')
@@ -236,12 +249,14 @@ class BookResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                // Filtr pro přepravky
+                Tables\Filters\SelectFilter::make('user')
+                    ->relationship('user', 'name')
+                    ->label('Uživatel')
+                    ->searchable()
+                    ->preload(),
                 Tables\Filters\SelectFilter::make('bin_number')
                     ->label('Podle přepravky')
                     ->options(fn () => \App\Models\Book::pluck('bin_number', 'bin_number')->toArray()),
-
-                // Filtr pro stavy
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Stav zpracování')
                     ->options([
@@ -249,8 +264,6 @@ class BookResource extends Resource
                         'review' => 'Ke kontrole',
                         'done' => 'Hotovo',
                     ]),
-
-                // Rychlý filtr pro staré tisky
                 Tables\Filters\TernaryFilter::make('is_antique')
                     ->label('Má ISBN')
                     ->trueLabel('Ano (běžné knihy)')
@@ -269,7 +282,7 @@ class BookResource extends Resource
                     ->icon('heroicon-o-camera')
                     ->color('info')
                     ->modalContent(fn ($record) => view('filament.components.photo-display', ['photos' => array_merge($record->photos, [$record->main_photo])]))
-                    ->modalSubmitAction(false) // Schová tlačítko uložit
+                    ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Zavřít'),
                 Tables\Actions\DeleteAction::make()->label(''),
             ])
