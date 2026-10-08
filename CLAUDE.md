@@ -161,6 +161,10 @@ Pozor: Pint (Laravel preset) mění `!$x` na `! $x`, kód ale používá `!$x` (
 - Produkce: Docker (`Dockerfile.prod`, `compose-prod.yaml`) – `laravel.app` (php-fpm), `laravel.worker`
   (`queue:work`, limit 128 MB; s LLM driverem musí dosáhnout přes VPN na `10.7.0.2:11434`), `nginx` (port 8080, za Nginx Proxy Managerem v síti `proxy_network`), `mysql`.
   Data v bind-volumech `/srv/volume/knihozrout/{db,storage}`.
+- Docker build spouští `config:cache`/`route:cache`/`view:cache` **bez `.env` a bez `google-auth.json`**. Artisan přitom
+  vytváří instance všech příkazů → **služby do příkazů injektuj v `handle()`, ne v konstruktoru** (jinak se při buildu
+  vytvoří např. `ImageAnnotatorClient`). Klient Google se proto bez souboru s credentials vytvoří bez nich (ADC).
+  Každá Blade komponenta musí existovat i v nepoužívaných šablonách (`view:cache` kompiluje všechny).
 - GitHub Actions `.github/workflows/deploy.yml`: build image → `ghcr.io/okenagod/knihozrout/laravel-app:latest`
   → scp compose + nginx.conf → `docker compose pull/up` → `migrate --force`, cache příkazy.
 - README popisuje i alternativní nasazení na sdílený hosting přes FTP + cron (`.env.vedos`).

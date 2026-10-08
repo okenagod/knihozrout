@@ -26,9 +26,11 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(ImageAnnotatorClient::class, function () {
-            return new ImageAnnotatorClient([
-                'credentials' => base_path(config('services.google.vision_credentials')),
-            ]);
+            // bez souboru s credentials (např. při docker buildu nebo s BOOK_SCAN_DRIVER=llm) nepadat –
+            // klient pak použije Application Default Credentials a případná chyba přijde až při volání OCR
+            $credentials = base_path((string) config('services.google.vision_credentials'));
+
+            return new ImageAnnotatorClient(is_file($credentials) ? ['credentials' => $credentials] : []);
         });
 
         $this->app->singleton(LlmConnector::class, function () {

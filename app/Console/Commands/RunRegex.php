@@ -28,12 +28,6 @@ class RunRegex extends Command
      */
     protected $description = 'Spusti REGEX z OCR u knih, kde neni nactene ISBN/SPN';
 
-    public function __construct(
-        private BookOcrService $service
-    ) {
-        parent::__construct();
-    }
-
     /**
      * Handles the processing of books that meet specific criteria.
      *
@@ -43,7 +37,7 @@ class RunRegex extends Command
      * ISBN/SPN was identified. If no books meet the criteria, it outputs an
      * appropriate message.
      */
-    public function handle()
+    public function handle(BookOcrService $service)
     {
         // Hlavní podmínka: hledáme knihy, kde je ocr_full_text prázdný nebo null
         $books = Book::query()
@@ -64,7 +58,7 @@ class RunRegex extends Command
         {
             $this->info("Zpracovávám knihu ID {$book->id} (Bin: {$book->bin_number})...");
 
-            $this->service->updateRegexText($book);
+            $service->updateRegexText($book);
             $book->save();
             $this->line("<fg=green>Kniha {$book->id} zpracována.</>");
             if ($book->isbn)
