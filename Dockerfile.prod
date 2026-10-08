@@ -46,8 +46,9 @@ COPY serverconfig/docker-php-error-logging.ini /usr/local/etc/php/conf.d/99-logg
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Optimalizace pro produkci
-RUN php artisan config:cache && \
-    php artisan route:cache && \
+# config:cache ne – při buildu není .env, do image by se zapekla výchozí konfigurace (SQLite).
+# Konfigurace se cachuje až v běžícím kontejneru (deploy.yml).
+RUN php artisan route:cache && \
     php artisan view:cache
 
 EXPOSE 9000

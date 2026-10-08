@@ -73,9 +73,10 @@ jobs:
             docker compose up -d --force-recreate
             # 2. Spustit Laravel příkazy uvnitř běžícího kontejneru
             # Používáme -T (disable pseudo-tty), protože v CI prostředí není terminál
+            # config:cache musí být před migrací (jinak migrace běží s konfigurací bez .env)
+            docker compose exec -T laravel.app php artisan config:cache
             docker compose exec -T laravel.app php artisan migrate --force
             docker compose exec -T laravel.app php artisan storage:link
-            docker compose exec -T laravel.app php artisan config:cache
             docker compose exec -T laravel.app php artisan route:cache
             docker compose exec -T laravel.app php artisan view:cache
             # 3. Úklid starých obrazů kvůli místu na disku
