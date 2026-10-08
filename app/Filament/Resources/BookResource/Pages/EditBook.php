@@ -4,7 +4,7 @@ namespace App\Filament\Resources\BookResource\Pages;
 
 use App\Filament\Resources\BookResource;
 use App\Models\Book;
-use App\Services\BookOcrService;
+use App\Services\BookScanServiceInterface;
 use App\Services\LibraryService;
 use Filament\Actions;
 use Filament\Notifications\Notification;
@@ -24,9 +24,11 @@ class EditBook extends EditRecord
                 ->label('Spustit OCR')
                 ->icon('heroicon-o-sparkles')
                 ->color('gray')
-                ->action(function (BookOcrService $ocrService) {
+                ->action(function (BookScanServiceInterface $ocrService) {
+                    // LLM může běžet déle než výchozí max_execution_time
+                    set_time_limit(config('services.llm.timeout') + 60);
                     $ocrService->processBook($this->record);
-                    $this->refreshFormData(['ocr_full_text', 'isbn']);
+                    $this->refreshFormData(['ocr_full_text', 'isbn', 'title', 'author', 'publisher', 'year']);
                     Notification::make()->title('OCR bylo dokončeno.')->success()->send();
                 }),
 

@@ -9,17 +9,17 @@ use Google\Cloud\Vision\V1\Client\ImageAnnotatorClient;
 use Google\Cloud\Vision\V1\Feature;
 use Google\Cloud\Vision\V1\Feature\Type;
 use Google\Cloud\Vision\V1\Image;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * The BookOcrService class provides methods for processing books through OCR (Optical Character Recognition),
  * extracting metadata such as ISBN, title, or author, and handling integration with external APIs like
  * Google Vision and OpenLibrary.
  */
-class BookOcrService
+class BookOcrService implements BookScanServiceInterface
 {
     public function __construct(
-        private ImageAnnotatorClient $client
+        private ImageAnnotatorClient $client,
+        private ImageProcessingService $imageProcessing,
     ) {}
 
     public function __destruct()
@@ -27,7 +27,7 @@ class BookOcrService
         $this->client->close();
     }
 
-    public function processBook(Book $book)
+    public function processBook(Book $book): void
     {
         // Kontrola, zda kniha vůbec má fotky
         if (!$book->main_photo)
@@ -42,7 +42,7 @@ class BookOcrService
         $imageRequests = [];
 
         // Zkusíme najít originál pro lepší OCR
-        $path = $this->getOriginalPath($book->main_photo);
+        $path = $this->imageProcessing->getOriginalPath($book->main_photo);
         $content = file_get_contents($path);
 
         $image = (new Image)->setContent($content);
@@ -92,32 +92,6 @@ class BookOcrService
     }
 
     /**
-     * Zkusí najít originální soubor pro danou cestu. Pokud neexistuje, vrátí cestu k optimalizovanému.
-     */
-    protected function getOriginalPath(string $path): string
-    {
-        $directory = dirname($path);
-        $filename = basename($path);
-        $filenameWithoutExt = pathinfo($filename, PATHINFO_FILENAME);
-
-        $originalFolder = $directory . '/original/';
-
-        if (Storage::disk('public')->exists($originalFolder))
-        {
-            $files = Storage::disk('public')->files($originalFolder);
-            foreach ($files as $file)
-            {
-                if (pathinfo($file, PATHINFO_FILENAME) === $filenameWithoutExt)
-                {
-                    return Storage::disk('public')->path($file);
-                }
-            }
-        }
-
-        return Storage::disk('public')->path($path);
-    }
-
-    /**
      * Aktualizuje text pomocí regulárních výrazů pro poskytnutou knihu.
      * Pokud kniha nemá nastaveno ISBN, pokusí se jej určit pomocí metody getRegexIsbn.
      * Pokud kniha nemá nastavený název a je označena jako starožitná,
@@ -143,7 +117,7 @@ class BookOcrService
      */
     protected function getTitle(Book $book)
     {
-        $lines = collect(explode("\n", $book->ocr_full_text))->map(fn($l) => trim($l))->filter();
+        $lines = collect(explode("\n", $book->ocr_full_text))->map(fn ($l) => trim($l))->filter();
 
         return $lines->first();
     }
@@ -155,8 +129,7 @@ class BookOcrService
      * within the full text of the book. If none is found and the book is marked as antique,
      * it further searches for a custom SPN-like code.
      *
-     * @param Book $book The book entity containing OCR full text and antique status.
-     *
+     * @param  Book        $book The book entity containing OCR full text and antique status.
      * @return string|null Returns a validated ISBN or custom identifier, or null if none found.
      */
     protected function getRegexIsbn(Book $book): ?string

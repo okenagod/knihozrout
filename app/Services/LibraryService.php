@@ -6,10 +6,8 @@ use App\DTO\BookData;
 use App\Models\Book;
 use App\Services\LibraryServices\GoogleBooksConnector;
 use App\Services\LibraryServices\KnihovnyCzConnector;
-use App\Services\LibraryServices\LibraryConnectorInterface;
 use App\Services\LibraryServices\NkpConnector;
 use App\Services\LibraryServices\OpenLibraryConnector;
-use Symfony\Component\VarDumper\VarDumper;
 
 class LibraryService
 {
@@ -41,10 +39,11 @@ class LibraryService
 
         if ($bookData)
         {
-            $book->title = $bookData->title;
-            $book->author = $bookData->author;
-            $book->publisher = $bookData->publisher;
-            $book->year = $bookData->year;
+            // data z knihovny mají přednost, ale chybějící údaje nemažou to, co už známe (např. z LLM)
+            $book->title = $bookData->title ?? $book->title;
+            $book->author = $bookData->author ?? $book->author;
+            $book->publisher = $bookData->publisher ?? $book->publisher;
+            $book->year = $bookData->year ?? $book->year;
 
             $book->save();
         }

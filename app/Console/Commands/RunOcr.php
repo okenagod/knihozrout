@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Book;
-use App\Services\BookOcrService;
+use App\Services\BookScanServiceInterface;
 use Illuminate\Console\Command;
 
 /**
@@ -11,7 +11,7 @@ use Illuminate\Console\Command;
  *
  * Command to process books requiring OCR (Optical Character Recognition).
  *
- * Handles the identification and processing of books by using the BookOcrService.
+ * Handles the identification and processing of books by using the BookScanServiceInterface (Google OCR or LLM, see BOOK_SCAN_DRIVER).
  * Books are retrieved based on parameters such as ID or incomplete OCR data,
  * with results or exceptions being logged during processing.
  */
@@ -30,7 +30,7 @@ class RunOcr extends Command
     protected $description = 'Spustí OCR u knih, které ještě nebyly zpracovány.';
 
     public function __construct(
-        private BookOcrService $service
+        private BookScanServiceInterface $service
     ) {
         parent::__construct();
     }

@@ -59,7 +59,7 @@ class BookResource extends Resource
             ]));
 
         $ocr = Comp\Textarea::make('ocr_full_text')
-            ->label('Surový výstup z Googlu')
+            ->label('Surový výstup OCR / LLM')
             ->rows(15)
             ->readOnly();
 

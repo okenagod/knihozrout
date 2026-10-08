@@ -40,4 +40,20 @@ return [
         'books_api_key' => env('GOOGLE_BOOKS_API_KEY'),
     ],
 
+    // Lokální LLM (Ollama API). Na VPS přes VPN http://10.7.0.2:11434,
+    // v Sail kontejneru http://host.docker.internal:11434.
+    'llm' => [
+        'base_url' => env('LLM_BASE_URL', 'http://127.0.0.1:11434'),
+        'model' => env('LLM_MODEL', 'qwen3-coder:30b'),
+        'vision_model' => env('LLM_VISION_MODEL', 'qwen2.5vl:7b'),
+        'timeout' => (int) env('LLM_TIMEOUT', 300),
+        'keep_alive' => env('LLM_KEEP_ALIVE', '10m'),
+    ],
+
+    // Čtení tiráže: 'google' = Google Vision OCR + regex, 'llm' = vision LLM vrací rovnou strukturovaná data
+    'book_scan' => [
+        'driver' => env('BOOK_SCAN_DRIVER', 'google'),
+        'llm_image_size' => (int) env('BOOK_SCAN_LLM_IMAGE_SIZE', 1280),
+    ],
+
 ];

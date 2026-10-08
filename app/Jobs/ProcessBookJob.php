@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Book;
-use App\Services\BookOcrService;
+use App\Services\BookScanServiceInterface;
 use App\Services\LibraryService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -15,11 +15,17 @@ class ProcessBookJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    /**
+     * LLM na slabším stroji může běžet i minuty (+ načtení modelu do paměti).
+     * Při změně hlídej DB_QUEUE_RETRY_AFTER, musí být větší.
+     */
+    public int $timeout = 600;
+
     public function __construct(
         public Book $book
     ) {}
 
-    public function handle(BookOcrService $ocrService, LibraryService $libraryService): void
+    public function handle(BookScanServiceInterface $ocrService, LibraryService $libraryService): void
     {
         // 1. Spustíme OCR nad hlavní fotkou
         $ocrService->processBook($this->book);

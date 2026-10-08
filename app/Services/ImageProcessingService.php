@@ -14,8 +14,7 @@ class ImageProcessingService
     /**
      * Zpracuje obrázek: uloží originál do podslozky 'original' a vytvoří optimalizovaný WebP v hlavním slozce.
      *
-     * @param string $path Relativní cesta k souboru v rámci 'public' disku.
-     *
+     * @param  string      $path Relativní cesta k souboru v rámci 'public' disku.
      * @return string|null Nová cesta k optimalizovanému souboru (WebP).
      */
     public function processImage(string $path): ?string
@@ -66,5 +65,33 @@ class ImageProcessingService
             // Ale raději zkusíme vrátit aspoň něco.
             return $originalPath;
         }
+    }
+
+    /**
+     * Zkusí najít originální soubor pro danou cestu. Pokud neexistuje, vrátí cestu k optimalizovanému.
+     *
+     * @param  string $path Relativní cesta k optimalizovanému souboru v rámci 'public' disku.
+     * @return string Absolutní cesta k souboru.
+     */
+    public function getOriginalPath(string $path): string
+    {
+        $directory = dirname($path);
+        $filenameWithoutExt = pathinfo($path, PATHINFO_FILENAME);
+
+        $originalFolder = $directory . '/original/';
+
+        if (Storage::disk('public')->exists($originalFolder))
+        {
+            $files = Storage::disk('public')->files($originalFolder);
+            foreach ($files as $file)
+            {
+                if (pathinfo($file, PATHINFO_FILENAME) === $filenameWithoutExt)
+                {
+                    return Storage::disk('public')->path($file);
+                }
+            }
+        }
+
+        return Storage::disk('public')->path($path);
     }
 }
