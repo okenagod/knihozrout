@@ -2,7 +2,7 @@ name: deploy.yml
 
 on:
   push:
-    branches: [ "master" ] # Spustí se při každém pushi do main
+    branches: [ "master_docker" ] # Spustí se při každém pushi do master_docker
 
 jobs:
   build:
