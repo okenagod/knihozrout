@@ -96,6 +96,16 @@ Nefunkční / zamítnuté: Heureka, Aukro (403 pro boty), Kosmas (výsledky hled
 Pozor na `Http::get($url, [])` – prázdné pole query **zahodí query string v URL** (proto `AbstractPriceSource::get()` posílá null).
 Ceny zahrnují i jiná vydání téhož titulu a nové dotisky (Martinus/Dobrovský) – min/max je proto orientační rozpětí.
 
+Stav po prvním testu na dev DB (2026-10-08): ceny nalezeny u knih 1, 2, 4, 6, 7 (Trh knih nejvíc nabídek, Knihobot skoro vždy,
+Dobrovský jen u knihy 7 – nový dotisk, Martinus v běhu nic). Knihy 3, 5 nic (kniha 5 má v DB překlep „Spuškou“ → hledání
+podle názvu selže). Plnění bylo přerušeno u knihy 8, knihy 8–11 ceny nemají. Celý běh 4 zdrojů ≈ 1–2 min/kniha (hlavně LLM obchody).
+
+Nápady na další zdroje / vylepšení (neimplementováno):
+- web search (SearXNG self-hosted nebo Brave Search API) + `LlmShopSource`-like extrakce → objevení libovolných antikvariátů,
+- LLM jako rozhodčí shody vydání (rok/nakladatel) místo heuristiky `BookMatcher`, odhad ceny podle `classification`,
+- outlier filtr pro min/max (nové dotisky vs. antikvariát), hledání i podle ISBN u LLM obchodů,
+- Heureka / Google Shopping mají jen partnerská API (klíč).
+
 ### LLM (Ollama)
 
 - `LlmConnector` je obecný – používej ho i na další úlohy (ne jen knihy). Obrázky se předávají jako binární

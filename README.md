@@ -1,12 +1,26 @@
 # Knihovník - Systém pro digitalizaci a evidenci knih
 
-Interní systém pro digitalizaci a evidenci knih postavený na Laravel 11, Filament PHP v3 a Google Cloud Vision AI.
+Interní systém pro digitalizaci a evidenci knih postavený na Laravel 12, Filament PHP v3, Google Cloud Vision AI a lokálním LLM (Ollama).
 
 ## Klíčové vlastnosti
-- **OCR zpracování**: Automatické vytěžování textu z fotek pomocí Google Cloud Vision.
+- **Čtení tiráže**: Google Cloud Vision OCR + regex, nebo lokální vision LLM (`BOOK_SCAN_DRIVER=llm`), které vrátí rovnou strukturovaná data (název, autor, nakladatel, rok, ISBN/SPN).
 - **Integrace knihoven**: Automatické doplňování metadat (název, autor, vydavatel, rok) z OpenLibrary, Google Books a Národní knihovny ČR (SRU/MARC21).
 - **Split-screen layout**: Optimalizované rozhraní pro rychlou kontrolu dat s fixním panelem fotografií.
-- **Asynchronní zpracování**: OCR a hledání v knihovnách probíhá na pozadí pomocí front (Queues).
+- **Ceny knih**: Po zpracování se kniha dohledá v antikvariátech a knihkupectvích (Trh knih, Knihobot, Knihy Dobrovský, Martinus – e-shopy čte LLM). Ceny se zobrazují v tabulce v detailu knihy a vyplní se z nich min/max cena.
+- **Asynchronní zpracování**: OCR, hledání v knihovnách i cen probíhá na pozadí pomocí front (Queues).
+
+## Lokální LLM (Ollama)
+Konfigurace v `.env` (viz `.env.example`):
+```
+LLM_BASE_URL=http://10.7.0.2:11434     # VPS přes VPN; v Sailu http://host.docker.internal:11434
+LLM_MODEL=qwen3-coder:30b              # textové úlohy (čtení cen z e-shopů)
+LLM_VISION_MODEL=qwen2.5vl:7b          # čtení tiráže
+BOOK_SCAN_DRIVER=llm                   # google | llm
+PRICES_ENABLED=true
+PRICES_LLM_SHOPS_ENABLED=true
+DB_QUEUE_RETRY_AFTER=660               # joby s LLM mohou běžet minuty
+```
+Na stroji s LLM musí Ollama poslouchat na VPN rozhraní (`OLLAMA_HOST=0.0.0.0`). Nový e-shop pro ceny = řádek v `config/prices.php` → `llm_shops`.
 
 ## Nasazení na produkční server (sdílený hosting)
 
@@ -97,5 +111,7 @@ Na produkci je důležité mít nacachovanou konfiguraci a routy:
 - Spuštění vývojového prostředí: `./vendor/bin/sail up`
 - Spuštění testů: `./vendor/bin/sail test`
 - Vytvoření administrátorského účtu: `./vendor/bin/sail artisan make:filament-user`
+- Test čtení tiráží přes LLM proti DB: `./vendor/bin/sail artisan app:llm-scan {id...}`
+- Dohledání cen: `./vendor/bin/sail artisan app:fetch-prices {id...}` (výpis), s `--save` uloží
 
 V produkčním prostředí bez Sailu použijte standardní: `php artisan make:filament-user` (pokud máte přístup k terminálu).
