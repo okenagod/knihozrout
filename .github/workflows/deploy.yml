@@ -47,7 +47,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "compose.yaml"
-          target: "/var/www"
+          target: "/var/www/knihozrout"
 
       - name: Copy nginx config
         uses: appleboy/scp-action@v0.1.7
@@ -56,7 +56,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "serverconfig/nginx.conf"
-          target: "/var/www"
+          target: "/var/www/knihozrout"
           strip_components: 1
 
       - name: Deploy via SSH
@@ -66,7 +66,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /var/www
+            cd /var/www/knihozrout
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             # 1. Stáhnout nový obraz a restartovat kontejnery
             docker compose pull
