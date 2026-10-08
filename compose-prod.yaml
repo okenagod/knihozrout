@@ -1,7 +1,7 @@
 services:
   laravel.app:
     image: ghcr.io/okenagod/knihozrout/laravel-app:latest
-    container_name: laravel_app
+    container_name: knihozrout_app
     restart: always
     env_file: .env
     depends_on:
@@ -19,6 +19,7 @@ services:
 
   laravel.worker:
     image: ghcr.io/okenagod/knihozrout/laravel-app:latest
+    container_name: knihozrout_worker
     restart: always
     env_file: .env
     command: sh -c "sleep 10 && php artisan config:clear && php artisan queue:work --memory=64 --sleep=3 --tries=3"
@@ -41,6 +42,7 @@ services:
   # Webový server (Nginx)
   nginx:
     image: nginx:alpine
+    container_name: knihozrout_nginx
     restart: always
     environment:
       - TZ=Europe/Prague
@@ -61,6 +63,7 @@ services:
   # Databáze
   mysql:
     image: 'mysql:8.4'
+    container_name: knihozrout_mysql
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
