@@ -64,6 +64,33 @@ class Isbn
     }
 
     /**
+     * Převede ISBN (10 i 13, s pomlčkami) na ISBN-13 bez oddělovačů. Neplatný formát → null.
+     */
+    public static function toIsbn13(?string $isbn): ?string
+    {
+        $digits = preg_replace('/[^0-9X]/', '', strtoupper((string) $isbn));
+
+        if (preg_match('/^\d{13}$/', $digits))
+        {
+            return $digits;
+        }
+
+        if (!preg_match('/^\d{9}[\dX]$/', $digits))
+        {
+            return null;
+        }
+
+        $base = '978' . substr($digits, 0, 9);
+        $sum = 0;
+        for ($i = 0; $i < 12; $i++)
+        {
+            $sum += (int) $base[$i] * ($i % 2 === 0 ? 1 : 3);
+        }
+
+        return $base . ((10 - $sum % 10) % 10);
+    }
+
+    /**
      * Normalizuje SPN kód (tematická skupina-pořadí-rok, např. "13-030-68"). Neplatný → null.
      */
     public static function normalizeSpn(?string $raw): ?string

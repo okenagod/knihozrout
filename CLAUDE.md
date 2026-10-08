@@ -9,7 +9,10 @@ Interní systém pro zpracování archivu knih. Uživatel (typicky admin na mobi
    - `llm`: **lokální vision LLM** (Ollama, `qwen2.5vl:7b`) vrátí rovnou přepis textu i strukturovaný JSON
      (název, autor, nakladatel, rok, ISBN, SPN) – bez regexů,
 3. podle ISBN se kniha dohledá v knihovních API a doplní se název, autor, vydavatel, rok,
-4. kniha přejde do stavu `review` a admin ji u PC zkontroluje / doplní a označí jako `done`.
+4. kniha přejde do stavu `review`,
+5. na pozadí se dohledají **ceny** v antikvariátech a knihkupectvích (`FetchBookPricesJob`) → tabulka `book_prices`
+   a z ní `minPrice`/`maxPrice` knihy,
+6. admin knihu u PC zkontroluje / doplní a označí jako `done`.
 
 Jazyk projektu: UI, komentáře i commity jsou česky. Locale `cs`.
 
@@ -29,20 +32,25 @@ Jazyk projektu: UI, komentáře i commity jsou česky. Locale `cs`.
 | Model knihy | `app/Models/Book.php` (`$guarded = []`, `photos` cast na array) |
 | Uživatelé, role | `app/Models/User.php` – `role` = `admin` / `user`; do Filamentu smí jen `admin` |
 | Spuštění pipeline | `app/Observers/BookObserver.php` – `created`: zpracuje fotky + `ProcessBookJob::dispatch()`; `deleted`: smaže fotky i originály |
-| Job | `app/Jobs/ProcessBookJob.php` – `BookScanServiceInterface` → `refresh()` → LibraryService; `$timeout = 600` |
+| Job | `app/Jobs/ProcessBookJob.php` – `BookScanServiceInterface` → `refresh()` → LibraryService → dispatch `FetchBookPricesJob`; `$timeout = 600` |
+| Ceny | `app/Services/PriceService.php` (`search()`, `updateBook()`), zdroje `app/Services/PriceServices/*Source.php`, `config/prices.php`, job `app/Jobs/FetchBookPricesJob.php` |
+| Model ceny | `app/Models/BookPrice.php` – `value`, `currency`, `source`, `url`, `title`, `condition`, `is_manual`; po uložení/smazání volá `Book::refreshPriceRange()` |
 | Obrázky | `app/Services/ImageProcessingService.php` – originál do `<dir>/original/`, WebP max šířka 1600 px, q80 |
 | Čtení tiráže – rozhraní | `app/Services/BookScanServiceInterface.php` – `processBook(Book)`; implementaci vybírá `AppServiceProvider` podle `services.book_scan.driver` |
 | OCR + parsování (google) | `app/Services/BookOcrService.php` – `processBook()`, `updateRegexText()`, `getRegexIsbn()`, `getTitle()` |
 | Čtení tiráže přes LLM (llm) | `app/Services/BookLlmService.php` – `processBook()`, `scanImage(path): BookScanData`, `toScanData()`, `fillBook()` |
 | LLM connector (obecný) | `app/Services/Llm/LlmConnector.php` – `chat()`, `complete()`, `json()` (structured output dle JSON schématu), `models()`, `isAvailable()`; chyby `LlmException` |
-| ISBN / SPN | `app/Support/Isbn.php` – `normalize()`, `isValid()` (kontrolní číslice), `normalizeSpn()` |
+| ISBN / SPN | `app/Support/Isbn.php` – `normalize()`, `isValid()` (kontrolní číslice), `toIsbn13()`, `normalizeSpn()` |
+| Porovnání knih | `app/Support/BookMatcher.php` – `titleMatches()`, `authorMatches()`, `mainTitle()`, `fold()` (bez diakritiky) |
+| HTML → text pro LLM | `app/Support/HtmlText.php` – `fromHtml()` (odkazy jako `[text](url)`), `window()` (výřez od výskytu názvu) |
 | Knihovny | `app/Services/LibraryService.php` + `app/Services/LibraryServices/*Connector.php` |
-| DTO | `app/DTO/BookData.php` (výsledek knihoven), `BookScanData.php` (výsledek LLM + `identifier()` = ISBN ?? SPN), `LlmResponse.php` |
+| DTO | `app/DTO/BookData.php` (výsledek knihoven), `BookScanData.php` (výsledek LLM + `identifier()` = ISBN ?? SPN), `LlmResponse.php`, `PriceOffer.php` (nalezená cena) |
 | DI / singletony | `app/Providers/AppServiceProvider.php` – `ImageManager`, `ImageAnnotatorClient`, `LlmConnector`, binding `BookScanServiceInterface`, registrace observeru |
 | Admin UI | `app/Filament/Resources/BookResource.php` (create = rychlý sběr na mobilu, edit = split-screen kontrola), `UserResource.php` |
+| Tabulka cen v detailu | `app/Filament/Resources/BookResource/RelationManagers/PricesRelationManager.php` – akce „Načíst ceny“ (dispatch jobu), ruční přidání (`is_manual`), poll 15 s; po změně posílá event `prices-updated`, `EditBook::refreshPriceRange()` obnoví min/max ve formuláři |
 | Dashboard widgety | `app/Filament/Widgets/` – `AddBook`, `StartReview` (otevře další knihu ve stavu `review`), `BookStats` |
 | Frontend pro běžné uživatele | `routes/web.php`, `app/Http/Controllers/BookController.php`, `resources/views/books/*` – `/my-books` (výpis, přidání knihy), vlastní login/registrace |
-| Artisan příkazy | `app:run-ocr {id?}` – čtení tiráže (aktuální driver) u knih bez `ocr_full_text`; `app:run-regex` – znovu pustí regex nad uloženým OCR textem (jen Google výstup); `app:llm-scan {id?*} {--save}` – přečte tiráže přes LLM a porovná s údaji v DB (bez `--save` nic neukládá) |
+| Artisan příkazy | `app:run-ocr {id?}` – čtení tiráže (aktuální driver) u knih bez `ocr_full_text`; `app:run-regex` – znovu pustí regex nad uloženým OCR textem (jen Google výstup); `app:llm-scan {id?*} {--save}` – přečte tiráže přes LLM a porovná s údaji v DB (bez `--save` nic neukládá); `app:fetch-prices {id?*} {--save}` – dohledá ceny (bez id = knihy s názvem a bez cen; bez `--save` jen vypíše) |
 
 ### Datový model `books`
 
@@ -50,7 +58,10 @@ Jazyk projektu: UI, komentáře i commity jsou česky. Locale `cs`.
 `classification` (1–5: jako nová … torzo), `bin_number` (číslo přepravky, povinné),
 `main_photo` (tiráž – jediná fotka posílaná do OCR), `photos` (JSON pole ostatních fotek),
 `status` (`new` → `review` → `done`), `is_antique` (kniha nemá ISBN, typicky před r. 1989),
-`ocr_full_text`, `user_id` (vlastník knihy), `note`, `minPrice`, `maxPrice` (camelCase sloupce!).
+`ocr_full_text`, `user_id` (vlastník knihy), `note`, `minPrice`, `maxPrice` (camelCase sloupce! plní se z `book_prices`).
+
+`book_prices`: `book_id` (cascade delete), `value` decimal(10,2), `currency` (CZK), `source` (název zdroje), `url`,
+`title` (název nabídky), `condition` (stav/vazba), `is_manual`. Min/max se počítá jen z CZK; bez cen se min/max nemění.
 
 Fotky leží na disku `public` v `book-scans/`, originály v `book-scans/original/`.
 
@@ -67,6 +78,23 @@ Všechny implementují `LibraryConnectorInterface::fetch(string $isbn): ?BookDat
 Nový zdroj = nová třída implementující interface + přidat do konstruktoru a `getConnectors()` v `LibraryService`.
 `LibraryService::processBook()` data z knihovny přednostně použije, ale null hodnoty nepřepíší už známé údaje (např. z LLM).
 V editaci knihy je u pole ISBN akce „Hledat v NKP“, která ve skutečnosti volá celý `searchByIsbn()`.
+
+### Ceny (`PriceService`)
+
+Zdroje implementují `PriceSourceInterface::search(Book): PriceOffer[]` (`name()` = hodnota `book_prices.source`).
+`PriceService::updateBook()` projde všechny zdroje (chyba zdroje se jen zaloguje), odstraní duplicity,
+**smaže automatické ceny knihy a vloží nové** (ruční `is_manual` zůstanou) a přepočítá min/max.
+
+| Zdroj | Jak | Poznámky |
+|---|---|---|
+| `TrhKnihSource` | HTML: hledání `/hledat?q=` (jen název, ISBN neumí) → vydání → detail `/kniha/{id}` s nabídkami (`data-ask-price`) | vybírá vydání se shodným názvem + autorem, preferuje stejný rok; max `trhknih_max_issues` vydání; stav z popisu („stav: viz dále“ → text inzerátu) |
+| `KnihobotSource` | JSON `__NEXT_DATA__` z `/p/q/{ISBN nebo název}` | jen nejnižší cena titulu + počet kusů, URL `/g/{grandmothers_id}`; detail ceny jednotlivých kusů nemá |
+| `LlmShopSource` | obecný: stránka hledání → `HtmlText` → textový LLM (`services.llm.model`) vrátí nabídky JSON | instance z `config('prices.llm_shops')` (Dobrovský, Martinus); ~20–60 s/obchod; LLM se nevolá, když název na stránce není; ověřuje cenu v textu, název/autora a host odkazu |
+
+Nový obchod: s rozumným HTML stačí řádek do `llm_shops`, jinak vlastní třída do `prices.sources`.
+Nefunkční / zamítnuté: Heureka, Aukro (403 pro boty), Kosmas (výsledky hledání se načítají JS), antikvariaty.cz (jen 2 obchody).
+Pozor na `Http::get($url, [])` – prázdné pole query **zahodí query string v URL** (proto `AbstractPriceSource::get()` posílá null).
+Ceny zahrnují i jiná vydání téhož titulu a nové dotisky (Martinus/Dobrovský) – min/max je proto orientační rozpětí.
 
 ### LLM (Ollama)
 
@@ -91,7 +119,8 @@ V editaci knihy je u pole ISBN akce „Hledat v NKP“, která ve skutečnosti v
 - `services.llm.*`: `LLM_BASE_URL` (Sail: `http://host.docker.internal:11434`, z WSL hostu `http://127.0.0.1:11434`,
   VPS přes VPN: `http://10.7.0.2:11434`), `LLM_MODEL` (výchozí textový), `LLM_VISION_MODEL`, `LLM_TIMEOUT` (s), `LLM_KEEP_ALIVE`.
 - `services.book_scan.*`: `BOOK_SCAN_DRIVER` = `google` (výchozí) | `llm`, `BOOK_SCAN_LLM_IMAGE_SIZE`.
-- Při `llm` driveru nastav `DB_QUEUE_RETRY_AFTER` > 600 (timeout `ProcessBookJob`), jinak se dlouhý job může spustit znovu.
+- `config/prices.php`: `PRICES_ENABLED`, `PRICES_LLM_SHOPS_ENABLED`, seznam zdrojů a LLM obchodů, `llm_num_ctx` (Ollama má malý výchozí kontext!).
+- Při `llm` driveru i cenách nastav `DB_QUEUE_RETRY_AFTER` > 600 (timeout jobů), jinak se dlouhý job může spustit znovu.
 - Akce „Spustit OCR“ v editaci knihy běží synchronně v HTTP požadavku (zvedá `set_time_limit`); nginx/php-fpm timeouty
   mohou u pomalého LLM requestu stále zasáhnout.
 - Mimo `local` prostředí se vynucuje HTTPS (`URL::forceScheme`).
@@ -106,6 +135,7 @@ V editaci knihy je u pole ISBN akce „Hledat v NKP“, která ve skutečnosti v
 ./vendor/bin/sail test                     # PHPUnit 11
 ./vendor/bin/sail artisan make:filament-user
 ./vendor/bin/sail artisan app:llm-scan 4 7 8          # test LLM čtení tiráží proti DB (vyžaduje běžící Ollamu)
+./vendor/bin/sail artisan app:fetch-prices 4 7         # vypíše nalezené ceny (s --save uloží)
 composer dev                               # alternativa bez Sailu: serve + queue + pail + vite
 vendor/bin/pint                            # code style – vlastní pint.json
 vendor/bin/phpstan analyse                 # Larastan, level 5, jen app/

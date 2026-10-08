@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\BookResource\Pages;
+use App\Filament\Resources\BookResource\RelationManagers;
 use App\Models\Book;
 use App\Services\LibraryService;
 use Filament\Forms\Components as Comp;
@@ -165,7 +166,8 @@ class BookResource extends Resource
                         'done' => 'Hotovo',
                     ])->default('new'),
                 Comp\Textarea::make('note')->label('Poznámka')->rows(3),
-                Comp\TextInput::make('minPrice')->label('Minimální cena')->numeric()->prefix('Kč'),
+                Comp\TextInput::make('minPrice')->label('Minimální cena')->numeric()->prefix('Kč')
+                    ->helperText('Doplní se z tabulky cen níže'),
                 Comp\TextInput::make('maxPrice')->label('Maximální cena')->numeric()->prefix('Kč'),
             ];
 
@@ -299,7 +301,7 @@ class BookResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\PricesRelationManager::class,
         ];
     }
 

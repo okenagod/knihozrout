@@ -34,5 +34,11 @@ class ProcessBookJob implements ShouldQueue
         // Musíme znovu načíst model, aby měl v sobě nové ISBN z OCR
         $this->book->refresh();
         $libraryService->processBook($this->book);
+
+        // 3. S názvem/ISBN dohledáme ceny v antikvariátech a obchodech (samostatný job – trvá déle a nesmí shodit OCR)
+        if (config('prices.enabled'))
+        {
+            FetchBookPricesJob::dispatch($this->book);
+        }
     }
 }

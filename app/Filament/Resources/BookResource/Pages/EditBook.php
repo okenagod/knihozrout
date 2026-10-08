@@ -9,6 +9,7 @@ use App\Services\LibraryService;
 use Filament\Actions;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Livewire\Attributes\On;
 
 /**
  * @property Book $record
@@ -92,6 +93,16 @@ class EditBook extends EditRecord
                 ->action('save'),
             $this->getCancelFormAction(),
         ];
+    }
+
+    /**
+     * Tabulka cen (PricesRelationManager) přepočítala min/max – zobrazíme nové hodnoty ve formuláři.
+     */
+    #[On('prices-updated')]
+    public function refreshPriceRange(): void
+    {
+        $this->record->refresh();
+        $this->refreshFormData(['minPrice', 'maxPrice']);
     }
 
     /**
